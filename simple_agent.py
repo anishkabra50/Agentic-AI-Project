@@ -19,10 +19,26 @@ load_dotenv()
 
 # ── Clients ──────────────────────────────────────────────────────────────────
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
+def get_api_key(name):
+    """Universal helper to get keys from Streamlit Cloud Secrets or local .env"""
+    try:
+        import streamlit as st
+        if name in st.secrets:
+            return st.secrets[name]
+    except (ImportError, RuntimeError):
+        pass
+    return os.getenv(name)
 
-MODEL_NAME = "gemini-2.5-flash"  # using the newest gemini 2.5 flash model
+gemini_key = get_api_key("GEMINI_API_KEY")
+tavily_key = get_api_key("TAVILY_API_KEY")
+
+if not gemini_key:
+    raise ValueError("GEMINI_API_KEY not found. Please set it in your .env file or Streamlit Secrets.")
+
+client = genai.Client(api_key=gemini_key)
+tavily_client = TavilyClient(api_key=tavily_key)
+
+MODEL_NAME = "gemini-1.5-flash" 
 
 
 # ─────────────────────────────────────────────────────────────────────────────
