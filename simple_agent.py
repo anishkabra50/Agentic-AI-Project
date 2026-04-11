@@ -38,7 +38,7 @@ if not gemini_key:
 client = genai.Client(api_key=gemini_key)
 tavily_client = TavilyClient(api_key=tavily_key)
 
-MODEL_NAME = "gemini-1.5-flash" 
+MODEL_NAME = "gemini-2.5-flash"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
