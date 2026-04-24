@@ -11,9 +11,33 @@ No heavy frameworks. Pure Python + google-genai + tavily-python.
 
 import os
 import json
+import time
+import random
+from functools import wraps
 from dotenv import load_dotenv
 from google import genai
 from tavily import TavilyClient
+
+def retry_api_call(max_retries=5, initial_delay=2):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            last_exception = None
+            delay = initial_delay
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    last_exception = e
+                    if attempt < max_retries - 1:
+                        # Exponential backoff with jitter
+                        sleep_time = delay + random.uniform(0, 1)
+                        print(f"[Warning] Attempt {attempt + 1} failed for {func.__name__} due to {e}. Retrying in {sleep_time:.2f}s...")
+                        time.sleep(sleep_time)
+                        delay *= 2
+            raise last_exception
+        return wrapper
+    return decorator
 
 load_dotenv()
 
@@ -25,7 +49,7 @@ def get_api_key(name):
         import streamlit as st
         if name in st.secrets:
             return st.secrets[name]
-    except (ImportError, RuntimeError):
+    except Exception:
         pass
     return os.getenv(name)
 
@@ -46,6 +70,7 @@ MODEL_NAME = "gemini-2.5-flash"
 #  Responsibility: Take the user query, search Tavily, return raw facts.
 # ─────────────────────────────────────────────────────────────────────────────
 
+@retry_api_call(max_retries=5, initial_delay=2)
 def run_researcher(user_query: str) -> str:
     """
     Searches the web via Tavily and asks Gemini to pull out the key facts
@@ -97,6 +122,7 @@ Return only the extracted facts as bullet points."""
 #  Responsibility: Take raw facts → produce a clean Top-3 recommendation.
 # ─────────────────────────────────────────────────────────────────────────────
 
+@retry_api_call(max_retries=5, initial_delay=2)
 def run_synthesizer(user_query: str, raw_facts: str) -> str:
     """
     Takes the raw bullet-point facts from the Researcher and produces
@@ -137,6 +163,7 @@ Do NOT add any tools that were not in the raw facts."""
 #  Responsibility: Evaluate the Synthesizer's output using a rubric.
 # ─────────────────────────────────────────────────────────────────────────────
 
+@retry_api_call(max_retries=5, initial_delay=2)
 def run_judge(user_query: str, final_recommendations: str) -> dict:
     """
     Evaluates the quality of the final recommendations using a strict rubric.

@@ -119,7 +119,15 @@ if search_clicked and user_query.strip():
         try:
             result = run_pipeline(user_query.strip())
         except Exception as e:
-            st.error(f"Something went wrong: {e}")
+            error_msg = str(e)
+            if "503" in error_msg or "high demand" in error_msg.lower():
+                st.error("🚦 **High Traffic:** The AI model is currently experiencing high demand and is temporarily unavailable.")
+                st.info("💡 **What to do:** This is a capacity issue with the AI provider (Google Gemini). Please try again in 1-2 minutes.")
+            elif "Connection" in error_msg or "104" in error_msg:
+                st.error("🔌 **Connection Error:** The AI service connection was interrupted or refused.")
+                st.info("💡 **What to do:** This is usually a temporary issue with the external provider. Please wait a few seconds and try your search again.")
+            else:
+                st.error(f"Something went wrong: {e}")
             st.stop()
 
         status.update(label="✅ Pipeline complete!", state="complete", expanded=False)
